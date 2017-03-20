@@ -1,0 +1,11 @@
+<div class="wrapper">
+    <div class="container">
+        <textarea class="form-control" 
+            rows="20" onclick="this.select()"
+            [(ngModel)]="text">
+            Enter your text here
+        </textarea>
+        <div class="vertical-spacer"></div>
+        <button (click)="startReading()">Start reading</button>
+    </div>
+</div>

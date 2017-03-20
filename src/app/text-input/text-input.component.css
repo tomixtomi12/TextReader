@@ -1,0 +1,28 @@
+div.wrapper {
+    padding: 50px 50px 50px 50px;
+}
+
+div.container {
+    width: 100%;
+    max-width: 1900px;
+    text-align: center;
+}
+
+textarea {
+  background-color : #d1d1d1; 
+}
+
+button {
+    color: black;
+    background-color: #d1d1d1;
+    border: solid black 1px;
+    border-radius: 5px;
+    width: 100%;
+    max-width: 200px;
+    height: 40px;
+    font-size: 22px;
+}
+
+button:hover {
+    background-color: #bebebe;
+}
