@@ -21,7 +21,7 @@ export class TextViewComponent implements OnInit {
   }
 
   next() {
-    if (this.current + 1 < this.textList.length - 1) {
+    if (this.current + 1 < this.textList.length) {
       this.current++;
     }
   }

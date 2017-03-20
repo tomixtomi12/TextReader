@@ -20,8 +20,12 @@ export class TextService {
       if (i % 80 === 0 && i !== 0) {
         this.text.push(buffer);
         buffer = '';
-        console.log(buffer);
       }
+    }
+
+    if (buffer !== '') {
+      this.text.push(buffer);
+      buffer = '';
     }
 
     localStorage.setItem('reader', JSON.stringify(this.text));
