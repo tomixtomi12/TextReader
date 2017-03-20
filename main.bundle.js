@@ -30,8 +30,11 @@ var TextService = (function () {
             if (i % 80 === 0 && i !== 0) {
                 this.text.push(buffer);
                 buffer = '';
-                console.log(buffer);
             }
+        }
+        if (buffer !== '') {
+            this.text.push(buffer);
+            buffer = '';
         }
         localStorage.setItem('reader', JSON.stringify(this.text));
     };
@@ -126,7 +129,7 @@ var TextViewComponent = (function () {
         this.current = 0;
     };
     TextViewComponent.prototype.next = function () {
-        if (this.current + 1 < this.textList.length - 1) {
+        if (this.current + 1 < this.textList.length) {
             this.current++;
         }
     };
