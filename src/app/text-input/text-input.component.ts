@@ -21,6 +21,6 @@ export class TextInputComponent implements OnInit {
 
   startReading() {
     this.textService.setText(this.text);
-    this.router.navigate(['/read']);
+    this.router.navigate(['/read', 1]);
   }
 }

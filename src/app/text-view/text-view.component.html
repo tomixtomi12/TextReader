@@ -1,6 +1,13 @@
-<div class="wrapper">
-  <div class="container text-wrapper">
-    <p>
+<div class="wrapper" [style.background-image]="getBackgroundImage()">
+  <div class="container button-wrapper">
+    <div class="button-class" [(colorPicker)]="textBackgroundColor">background color</div>
+    <div class="button-class" [(colorPicker)]="textColor">text color</div>
+    <label>Backround image: </label>
+    <input class="text-input" type="text" [(ngModel)]="backgroundImage" onclick="this.select()">
+  </div>
+
+  <div class="container text-wrapper" [style.background]="textBackgroundColor">
+    <p [style.color]="textColor">
       {{textList[current]}}
     </p>
   </div>
@@ -8,7 +15,8 @@
   <div class="vertical-spacer"></div>
 
   <div class="container button-wrapper">
-    <button class="prev-button" (click)="previous()">previous</button>
-    <button class="right-button" (click)="next()">next</button>
+    <div class="prev-button button-class" (click)="previous()">previous</div>
+    <div class="center-label">{{current + 1}} out of {{textList.length}}</div>
+    <div class="right-button button-class" (click)="next()">next</div>
   </div>
 </div>

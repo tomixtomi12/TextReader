@@ -9,7 +9,8 @@ import { TextViewModule } from './text-view/text-view.module';
 const ROUTES: Route[] = [
   { path: '', redirectTo: 'input', pathMatch: 'full' },
   { path: 'input', component: TextInputComponent },
-  { path: 'read', component: TextViewComponent },
+  { path: 'read', redirectTo: 'read/1', pathMatch: 'full' },
+  { path: 'read/:page', component: TextViewComponent },
   { path: '**', redirectTo: 'input', pathMatch: 'full' }
 ];
 
@@ -18,7 +19,7 @@ const ROUTES: Route[] = [
     CommonModule,
     TextInputModule,
     TextViewModule,
-    RouterModule.forRoot(ROUTES)
+    RouterModule.forRoot(ROUTES, {useHash: true})
   ],
   declarations: [],
   exports: [
