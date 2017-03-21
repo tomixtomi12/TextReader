@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { TextService } from '../text-service/text.service';
-import { ActivatedRoute, Router } from "@angular/router";
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-text-view',
@@ -14,8 +14,8 @@ export class TextViewComponent implements OnInit, OnDestroy {
   textBackgroundColor = '#bfbfbf';
   textColor = '#000000';
   backgroundImage = 'http://4kwallpapershd.com/wp-content/uploads/2016/08/Colored-Nebula-In-Space-Large-Image.jpg';
-
   sub: any;
+  id = 'HAMukFBSm6s';
 
   constructor(
     private textService: TextService,
