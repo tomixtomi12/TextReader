@@ -5140,7 +5140,10 @@ var Observable = (function () {
             throw new Error('no Promise impl found');
         }
         return new PromiseCtor(function (resolve, reject) {
-            var subscription = _this.subscribe(function (value) {
+            // Must be declared in a separate statement to avoid a RefernceError when
+            // accessing subscription below in the closure due to Temporal Dead Zone.
+            var subscription;
+            subscription = _this.subscribe(function (value) {
                 if (subscription) {
                     // if there is a subscription, then we can surmise
                     // the next handling is asynchronous. Any errors thrown
@@ -5174,7 +5177,7 @@ var Observable = (function () {
      * @method Symbol.observable
      * @return {Observable} this instance of the observable
      */
-    Observable.prototype[observable_1.$$observable] = function () {
+    Observable.prototype[observable_1.observable] = function () {
         return this;
     };
     // HACK: Since TypeScript inherits static properties too, we have to
@@ -5713,7 +5716,7 @@ var Subscriber = (function (_super) {
                 break;
         }
     }
-    Subscriber.prototype[rxSubscriber_1.$$rxSubscriber] = function () { return this; };
+    Subscriber.prototype[rxSubscriber_1.rxSubscriber] = function () { return this; };
     /**
      * A static factory for a Subscriber, given a (potentially partial) definition
      * of an Observer.
@@ -5815,14 +5818,16 @@ var SafeSubscriber = (function (_super) {
             next = observerOrNext;
         }
         else if (observerOrNext) {
-            context = observerOrNext;
             next = observerOrNext.next;
             error = observerOrNext.error;
             complete = observerOrNext.complete;
-            if (isFunction_1.isFunction(context.unsubscribe)) {
-                this.add(context.unsubscribe.bind(context));
+            if (observerOrNext !== Observer_1.empty) {
+                context = Object.create(observerOrNext);
+                if (isFunction_1.isFunction(context.unsubscribe)) {
+                    this.add(context.unsubscribe.bind(context));
+                }
+                context.unsubscribe = this.unsubscribe.bind(this);
             }
-            context.unsubscribe = this.unsubscribe.bind(this);
         }
         this._context = context;
         this._next = next;
@@ -5865,15 +5870,17 @@ var SafeSubscriber = (function (_super) {
         }
     };
     SafeSubscriber.prototype.complete = function () {
+        var _this = this;
         if (!this.isStopped) {
             var _parentSubscriber = this._parentSubscriber;
             if (this._complete) {
+                var wrappedComplete = function () { return _this._complete.call(_this._context); };
                 if (!_parentSubscriber.syncErrorThrowable) {
-                    this.__tryOrUnsub(this._complete);
+                    this.__tryOrUnsub(wrappedComplete);
                     this.unsubscribe();
                 }
                 else {
-                    this.__tryOrSetError(_parentSubscriber, this._complete);
+                    this.__tryOrSetError(_parentSubscriber, wrappedComplete);
                     this.unsubscribe();
                 }
             }
@@ -7755,17 +7762,23 @@ function wrapIntoObservable(value) {
 
 "use strict";
 /* WEBPACK VAR INJECTION */(function(global) {
-/**
- * window: browser in DOM main thread
- * self: browser in WebWorker
- * global: Node.js/other
- */
-exports.root = (typeof window == 'object' && window.window === window && window
-    || typeof self == 'object' && self.self === self && self
-    || typeof global == 'object' && global.global === global && global);
-if (!exports.root) {
-    throw new Error('RxJS could not find any global context (window, self, global)');
-}
+// CommonJS / Node have global context exposed as "global" variable.
+// We don't want to include the whole node.d.ts this this compilation unit so we'll just fake
+// the global "global" var for now.
+var __window = typeof window !== 'undefined' && window;
+var __self = typeof self !== 'undefined' && typeof WorkerGlobalScope !== 'undefined' &&
+    self instanceof WorkerGlobalScope && self;
+var __global = typeof global !== 'undefined' && global;
+var _root = __window || __global || __self;
+exports.root = _root;
+// Workaround Closure Compiler restriction: The body of a goog.module cannot use throw.
+// This is needed when used with angular/tsickle which inserts a goog.module statement.
+// Wrap in IIFE
+(function () {
+    if (!_root) {
+        throw new Error('RxJS could not find any global context (window, self, global)');
+    }
+})();
 //# sourceMappingURL=root.js.map
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(33)))
 
@@ -9281,7 +9294,7 @@ var Subject = (function (_super) {
         this.hasError = false;
         this.thrownError = null;
     }
-    Subject.prototype[rxSubscriber_1.$$rxSubscriber] = function () {
+    Subject.prototype[rxSubscriber_1.rxSubscriber] = function () {
         return new SubjectSubscriber(this);
     };
     Subject.prototype.lift = function (operator) {
@@ -32626,7 +32639,7 @@ var Subscriber_1 = __webpack_require__(18);
  * applies a projection to each value and emits that projection in the output
  * Observable.
  *
- * @example <caption>Map every every click to the clientX position of that click</caption>
+ * @example <caption>Map every click to the clientX position of that click</caption>
  * var clicks = Rx.Observable.fromEvent(document, 'click');
  * var positions = clicks.map(ev => ev.clientX);
  * positions.subscribe(x => console.log(x));
@@ -32718,7 +32731,11 @@ function getSymbolObservable(context) {
     return $$observable;
 }
 exports.getSymbolObservable = getSymbolObservable;
-exports.$$observable = getSymbolObservable(root_1.root);
+exports.observable = getSymbolObservable(root_1.root);
+/**
+ * @deprecated use observable instead
+ */
+exports.$$observable = exports.observable;
 //# sourceMappingURL=observable.js.map
 
 /***/ }),
@@ -46040,7 +46057,11 @@ function symbolIteratorPonyfill(root) {
     }
 }
 exports.symbolIteratorPonyfill = symbolIteratorPonyfill;
-exports.$$iterator = symbolIteratorPonyfill(root_1.root);
+exports.iterator = symbolIteratorPonyfill(root_1.root);
+/**
+ * @deprecated use iterator instead
+ */
+exports.$$iterator = exports.iterator;
 //# sourceMappingURL=iterator.js.map
 
 /***/ }),
@@ -46051,8 +46072,12 @@ exports.$$iterator = symbolIteratorPonyfill(root_1.root);
 
 var root_1 = __webpack_require__(32);
 var Symbol = root_1.root.Symbol;
-exports.$$rxSubscriber = (typeof Symbol === 'function' && typeof Symbol.for === 'function') ?
+exports.rxSubscriber = (typeof Symbol === 'function' && typeof Symbol.for === 'function') ?
     Symbol.for('rxSubscriber') : '@@rxSubscriber';
+/**
+ * @deprecated use rxSubscriber instead
+ */
+exports.$$rxSubscriber = exports.rxSubscriber;
 //# sourceMappingURL=rxSubscriber.js.map
 
 /***/ }),
@@ -46172,8 +46197,8 @@ function subscribeToResult(outerSubscriber, result, outerValue, outerIndex) {
         });
         return destination;
     }
-    else if (result && typeof result[iterator_1.$$iterator] === 'function') {
-        var iterator = result[iterator_1.$$iterator]();
+    else if (result && typeof result[iterator_1.iterator] === 'function') {
+        var iterator = result[iterator_1.iterator]();
         do {
             var item = iterator.next();
             if (item.done) {
@@ -46186,8 +46211,8 @@ function subscribeToResult(outerSubscriber, result, outerValue, outerIndex) {
             }
         } while (true);
     }
-    else if (result && typeof result[observable_1.$$observable] === 'function') {
-        var obs = result[observable_1.$$observable]();
+    else if (result && typeof result[observable_1.observable] === 'function') {
+        var obs = result[observable_1.observable]();
         if (typeof obs.subscribe !== 'function') {
             destination.error(new TypeError('Provided object does not correctly implement Symbol.observable'));
         }
@@ -65007,7 +65032,7 @@ var PromiseObservable = (function (_super) {
      * @see {@link bindCallback}
      * @see {@link from}
      *
-     * @param {Promise<T>} promise The promise to be converted.
+     * @param {PromiseLike<T>} promise The promise to be converted.
      * @param {Scheduler} [scheduler] An optional IScheduler to use for scheduling
      * the delivery of the resolved value (or the rejection).
      * @return {Observable<T>} An Observable which wraps the Promise.
@@ -65667,11 +65692,48 @@ var __extends = (this && this.__extends) || function (d, b) {
 var Subscriber_1 = __webpack_require__(18);
 var Notification_1 = __webpack_require__(531);
 /**
- * @see {@link Notification}
  *
- * @param scheduler
- * @param delay
- * @return {Observable<R>|WebSocketSubject<T>|Observable<T>}
+ * Re-emits all notifications from source Observable with specified scheduler.
+ *
+ * <span class="informal">Ensure a specific scheduler is used, from outside of an Observable.</span>
+ *
+ * `observeOn` is an operator that accepts a scheduler as a first parameter, which will be used to reschedule
+ * notifications emitted by the source Observable. It might be useful, if you do not have control over
+ * internal scheduler of a given Observable, but want to control when its values are emitted nevertheless.
+ *
+ * Returned Observable emits the same notifications (nexted values, complete and error events) as the source Observable,
+ * but rescheduled with provided scheduler. Note that this doesn't mean that source Observables internal
+ * scheduler will be replaced in any way. Original scheduler still will be used, but when the source Observable emits
+ * notification, it will be immediately scheduled again - this time with scheduler passed to `observeOn`.
+ * An anti-pattern would be calling `observeOn` on Observable that emits lots of values synchronously, to split
+ * that emissions into asynchronous chunks. For this to happen, scheduler would have to be passed into the source
+ * Observable directly (usually into the operator that creates it). `observeOn` simply delays notifications a
+ * little bit more, to ensure that they are emitted at expected moments.
+ *
+ * As a matter of fact, `observeOn` accepts second parameter, which specifies in milliseconds with what delay notifications
+ * will be emitted. The main difference between {@link delay} operator and `observeOn` is that `observeOn`
+ * will delay all notifications - including error notifications - while `delay` will pass through error
+ * from source Observable immediately when it is emitted. In general it is highly recommended to use `delay` operator
+ * for any kind of delaying of values in the stream, while using `observeOn` to specify which scheduler should be used
+ * for notification emissions in general.
+ *
+ * @example <caption>Ensure values in subscribe are called just before browser repaint.</caption>
+ * const intervals = Rx.Observable.interval(10); // Intervals are scheduled
+ *                                               // with async scheduler by default...
+ *
+ * intervals
+ * .observeOn(Rx.Scheduler.animationFrame)       // ...but we will observe on animationFrame
+ * .subscribe(val => {                           // scheduler to ensure smooth animation.
+ *   someDiv.style.height = val + 'px';
+ * });
+ *
+ * @see {@link delay}
+ *
+ * @param {IScheduler} scheduler Scheduler that will be used to reschedule notifications from source Observable.
+ * @param {number} [delay] Number of milliseconds that states with what delay every notification should be rescheduled.
+ * @return {Observable<T>} Observable that emits the same notifications as the source Observable,
+ * but with provided scheduler.
+ *
  * @method observeOn
  * @owner Observable
  */
@@ -83010,7 +83072,7 @@ var FromObservable = (function (_super) {
      */
     FromObservable.create = function (ish, scheduler) {
         if (ish != null) {
-            if (typeof ish[observable_1.$$observable] === 'function') {
+            if (typeof ish[observable_1.observable] === 'function') {
                 if (ish instanceof Observable_1.Observable && !scheduler) {
                     return ish;
                 }
@@ -83022,7 +83084,7 @@ var FromObservable = (function (_super) {
             else if (isPromise_1.isPromise(ish)) {
                 return new PromiseObservable_1.PromiseObservable(ish, scheduler);
             }
-            else if (typeof ish[iterator_1.$$iterator] === 'function' || typeof ish === 'string') {
+            else if (typeof ish[iterator_1.iterator] === 'function' || typeof ish === 'string') {
                 return new IteratorObservable_1.IteratorObservable(ish, scheduler);
             }
             else if (isArrayLike_1.isArrayLike(ish)) {
@@ -83035,10 +83097,10 @@ var FromObservable = (function (_super) {
         var ish = this.ish;
         var scheduler = this.scheduler;
         if (scheduler == null) {
-            return ish[observable_1.$$observable]().subscribe(subscriber);
+            return ish[observable_1.observable]().subscribe(subscriber);
         }
         else {
-            return ish[observable_1.$$observable]().subscribe(new observeOn_1.ObserveOnSubscriber(subscriber, scheduler, 0));
+            return ish[observable_1.observable]().subscribe(new observeOn_1.ObserveOnSubscriber(subscriber, scheduler, 0));
         }
     };
     return FromObservable;
@@ -83137,7 +83199,7 @@ var StringIterator = (function () {
         this.idx = idx;
         this.len = len;
     }
-    StringIterator.prototype[iterator_1.$$iterator] = function () { return (this); };
+    StringIterator.prototype[iterator_1.iterator] = function () { return (this); };
     StringIterator.prototype.next = function () {
         return this.idx < this.len ? {
             done: false,
@@ -83157,7 +83219,7 @@ var ArrayIterator = (function () {
         this.idx = idx;
         this.len = len;
     }
-    ArrayIterator.prototype[iterator_1.$$iterator] = function () { return this; };
+    ArrayIterator.prototype[iterator_1.iterator] = function () { return this; };
     ArrayIterator.prototype.next = function () {
         return this.idx < this.len ? {
             done: false,
@@ -83170,7 +83232,7 @@ var ArrayIterator = (function () {
     return ArrayIterator;
 }());
 function getIterator(obj) {
-    var i = obj[iterator_1.$$iterator];
+    var i = obj[iterator_1.iterator];
     if (!i && typeof obj === 'string') {
         return new StringIterator(obj);
     }
@@ -83180,7 +83242,7 @@ function getIterator(obj) {
     if (!i) {
         throw new TypeError('object is not iterable');
     }
-    return obj[iterator_1.$$iterator]();
+    return obj[iterator_1.iterator]();
 }
 var maxSafeInteger = Math.pow(2, 53) - 1;
 function toLength(o) {
@@ -83585,7 +83647,7 @@ var root_1 = __webpack_require__(32);
  * @example
  * // Using normal ES2015
  * let source = Rx.Observable
- *   .just(42)
+ *   .of(42)
  *   .toPromise();
  *
  * source.then((value) => console.log('Value: %s', value));
@@ -83614,7 +83676,7 @@ var root_1 = __webpack_require__(32);
  *
  * // Setting via the method
  * let source = Rx.Observable
- *   .just(42)
+ *   .of(42)
  *   .toPromise(RSVP.Promise);
  *
  * source.then((value) => console.log('Value: %s', value));
@@ -83773,11 +83835,11 @@ var AsyncAction = (function (_super) {
     AsyncAction.prototype.recycleAsyncId = function (scheduler, id, delay) {
         if (delay === void 0) { delay = 0; }
         // If this action is rescheduled with the same delay time, don't clear the interval id.
-        if (delay !== null && this.delay === delay) {
+        if (delay !== null && this.delay === delay && this.pending === false) {
             return id;
         }
         // Otherwise, if the action's delay time is different from the current delay,
-        // clear the interval id
+        // or the action has been rescheduled before it's executed, clear the interval id
         return root_1.root.clearInterval(id) && undefined || undefined;
     };
     /**
@@ -84110,8 +84172,8 @@ function toSubscriber(nextOrObserver, error, complete) {
         if (nextOrObserver instanceof Subscriber_1.Subscriber) {
             return nextOrObserver;
         }
-        if (nextOrObserver[rxSubscriber_1.$$rxSubscriber]) {
-            return nextOrObserver[rxSubscriber_1.$$rxSubscriber]();
+        if (nextOrObserver[rxSubscriber_1.rxSubscriber]) {
+            return nextOrObserver[rxSubscriber_1.rxSubscriber]();
         }
     }
     if (!nextOrObserver && !error && !complete) {
